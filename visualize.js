@@ -8,7 +8,7 @@ function Visualize(config) {
         fft = new FFT(fbLength / channels, rate),
         signal = new Float32Array(fft.bufferSize);
 
-    context.scale(canvas.width / fft.spectrum.length, -canvas.height);
+    context.scale(2 * canvas.width / fft.spectrum.length, -canvas.height);
     context.translate(0, -1);
 
     $.extend(this, config, {
@@ -47,12 +47,13 @@ Visualize.prototype.processAudio = function (event) {
         signal.set(fb);
     }
 
-    fft.forward(signal);
+    fft.process(signal, false);
 
     context.clearRect(0, 0, fft.spectrum.length, 1);
 
-    for (var i = 0; i < fft.spectrum.length; i++) {
-        context.fillRect(i, 0, 1, fft.spectrum[i]);
+    var maxSpectrum = Math.sqrt(fft.sampleRate / 2);
+    for (var i = 0; i < fft.spectrum.length / 2; i++) {
+        context.fillRect(i, 0, 1, fft.spectrum[i] / maxSpectrum);
     }
 }
 
@@ -60,7 +61,7 @@ Visualize.prototype.processAudio = function (event) {
 var FFT = function (bufferSize, sampleRate) {
         this.bufferSize = bufferSize;
         this.sampleRate = sampleRate;
-        this.spectrum = new Float32Array(bufferSize / 2);
+        this.spectrum = new Float32Array(bufferSize);
         this.real = new Float32Array(bufferSize);
         this.imag = new Float32Array(bufferSize);
         this.reverseTable = new Uint32Array(bufferSize);
@@ -85,7 +86,7 @@ var FFT = function (bufferSize, sampleRate) {
         }
     };
 
-FFT.prototype.forward = function (buffer) {
+FFT.prototype.process = function (buffer, backward) {
     var bufferSize = this.bufferSize,
         cosTable = this.cosTable,
         sinTable = this.sinTable,
@@ -136,8 +137,9 @@ FFT.prototype.forward = function (buffer) {
         halfSize = halfSize << 1;
     }
 
-    i = bufferSize / 2, maxSpectrum = Math.sqrt(this.sampleRate / 2);
+    i = bufferSize;
     while (i--) {
-        spectrum[i] = Math.sqrt(real[i] * real[i] + imag[i] * imag[i]) / maxSpectrum;
+        spectrum[i] = Math.sqrt(real[i] * real[i] + imag[i] * imag[i]);
+        if(backward) { spectrum[i] /= bufferSize; }
     }
 };
