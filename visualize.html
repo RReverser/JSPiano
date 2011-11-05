@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style type="text/css">
+    canvas {
+        border: 1px solid black;
+    }
+</style>
+<script type="text/javascript" src="http://code.jquery.com/jquery.min.js"></script>
+<script type="text/javascript" src="visualize.js"></script>
+<script>
+$(function() {
+    $('audio[data-canvas-id]')
+    .bind('loadedmetadata', function(event) {
+        this.visualize = new Visualize({
+            audio: this,
+            canvas: $('#' + $(this).data('canvas-id'))[0]
+        });
+    })
+    .bind('MozAudioAvailable', function(event) {
+        this.visualize.processAudio(event.originalEvent);
+    });
+});
+</script>
+</head>
+<body>
+<audio src="/kryptonite.ogg" autoplay controls data-canvas-id="scr"></audio>
+<canvas id="scr" width="500" height="100"></canvas>
+</body>
+</html>
