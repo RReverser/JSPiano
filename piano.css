@@ -1,0 +1,43 @@
+textarea {
+    display: block;
+    width: 100%;
+}
+#piano {
+    padding: 1em;
+}
+.pianoKey {
+    cursor: pointer;
+    position: absolute;
+    border: 1px outset #000;
+    border-right-width: 2px;
+    border-bottom-width: 2px;
+    box-shadow: 0 2px 2px 0 #777;
+    text-align: center;
+}
+.pianoKey:hover {
+    border-style: solid;
+}
+.pianoKey:active, .pianoKey.active {
+    border-style: inset;
+    box-shadow: -1px 1px 1px -1px;
+}
+.pianoKey>span {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+}
+.pianoKey.fullTone {
+    background: #fff;
+    color: #000;
+    z-index: 0;
+    width: 80px;
+    height: 300px;
+}
+.pianoKey.halfTone {
+    background: #000;
+    color: #fff;
+    z-index: 1;
+    width: 40px;
+    height: 150px;
+}

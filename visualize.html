@@ -19,13 +19,13 @@ $(function() {
         });
     })
     .bind('MozAudioAvailable', function(event) {
-        this.visualize.processAudio(event.originalEvent);
+        this.visualize.processAudio(event.originalEvent.frameBuffer);
     });
 });
 </script>
 </head>
 <body>
-<audio src="/kryptonite.ogg" autoplay controls data-canvas-id="scr"></audio>
+<audio id="audio" src="/kryptonite.ogg" autoplay controls data-canvas-id="scr"></audio>
 <canvas id="scr" width="500" height="100"></canvas>
 </body>
 </html>

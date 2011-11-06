@@ -8,7 +8,7 @@ function Visualize(config) {
         fft = new FFT(fbLength / channels, rate),
         signal = new Float32Array(fft.bufferSize);
 
-    context.scale(2 * canvas.width / fft.spectrum.length, -canvas.height);
+    context.scale(canvas.width / fft.spectrum.length, -canvas.height);
     context.translate(0, -1);
 
     $.extend(this, config, {
@@ -21,7 +21,7 @@ function Visualize(config) {
     });
 }
 
-Visualize.prototype.processAudio = function (event) {
+Visualize.prototype.processAudio = function (fb) {
     function partialAvg(array, from, len) {
         var sum = 0, to = Math.min(from + len, array.length);
         for (var i = from; i < to; i++) {
@@ -30,9 +30,7 @@ Visualize.prototype.processAudio = function (event) {
         return sum / Math.max(1, len);
     }
 
-    var fb = event.frameBuffer,
-        t = event.time,
-        signal = this.signal,
+    var signal = this.signal,
         channels = this.channels,
         fft = this.fft,
         canvas = this.canvas,
@@ -52,7 +50,9 @@ Visualize.prototype.processAudio = function (event) {
     context.clearRect(0, 0, fft.spectrum.length, 1);
 
     var maxSpectrum = Math.sqrt(fft.sampleRate / 2);
-    for (var i = 0; i < fft.spectrum.length / 2; i++) {
-        context.fillRect(i, 0, 1, fft.spectrum[i] / maxSpectrum);
+    for (var i = 0; i < fft.spectrum.length; i++) {
+        context.fillRect(i, 0, 1, Math.exp(fft.spectrum[i] / maxSpectrum) / Math.exp(1));
     }
+    
+    return signal;
 }
