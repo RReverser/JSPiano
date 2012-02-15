@@ -52,7 +52,7 @@ $(function () {
         if (!event.shiftKey) keyName = keyName.toLowerCase();
         audioDestination.setText(keyName, true);
         $usertext.val($usertext.val() + keyName);
-        event.preventDefault();
+        //event.preventDefault();
     }
 
     $('.pianoKey').mousedown(function (event) {

@@ -51,7 +51,7 @@ Visualize.prototype.processAudio = function (fb) {
 
     var maxSpectrum = Math.sqrt(fft.sampleRate / 2);
     for (var i = 0; i < fft.spectrum.length; i++) {
-        context.fillRect(i, 0, 1, Math.exp(fft.spectrum[i] / maxSpectrum) / Math.exp(1));
+        context.fillRect(i, 0, 1, fft.spectrum[i] / maxSpectrum);
     }
     
     return signal;
