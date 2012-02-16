@@ -3,218 +3,32 @@
     
     <head>
         <title>Piano Demo (loading)</title>
-        <style type="text/css">
-            #wave { width: 100%; height: 200px; border: 1px solid black; }
-            .inf { text-align: right; padding-right: 1em }
-            .min, .max { width: 3em }
-            .min { text-align: right }
-            .max { text-align: left }
-            .val { text-align: center }
-            .val input { width: 100% }
-            #infY { vertical-align: top; text-align: right; padding-right: 2pt }
-            #infX { vertical-align: bottom; text-align: left; padding-left: 2pt }
-            #controls { text-align: center } 
-            
-            .pianoKey {
-                border: 1px outset #000;
-                border-right-width: 2px;
-                border-bottom-width: 2px;
-                border-bottom-left-radius: 4px;
-                border-bottom-right-radius: 4px;
-                box-shadow: 0 2px 2px 0 #777;
-                text-align: center;
-                height: 300px;
-                width: 60px;
-                float: left;
-                line-height: 450px;
-                cursor: pointer;
-            }
-            .pianoKey:hover {
-                border-style: solid;
-            }
-            .pianoKey:active, .pianoKey.active {
-                border-style: inset;
-                box-shadow: -1px 1px 1px -1px;
-            }
-            #miniKeys {
-                position: absolute;
-                margin-left: 15px;
-            }
-            .miniKey {
-                height: 150px;
-                width: 30px;
-                line-height: 150px;
-                color: #FFF;
-                background: #000;
-                margin-left: 30px;
-            }
-        </style>
+        <link type="text/css" rel="stylesheet" href="test.css" />
         <script type="text/javascript" src="html5slider.js"></script>
         <script type="text/javascript" src="freq.js"></script>
-        <script type="text/javascript">
-            Freq.maxRate = Freq(4000);
-
-            window.addEventListener('load', function () {
-            
-                var canvas = document.getElementById('wave'),
-                    context = canvas.getContext('2d'),
-                    worker = new Worker('freqs.worker.js');
-
-                context.scale(1, -canvas.height / 2);
-                context.translate(0, -1);
-                
-                var spectrum = [
-                    '#FF00FF', // 5, Magenta, 300°
-                    '#0000FF', // 4, Blue,    240°
-                    '#00FFFF', // 3, Cyan,    180°
-                    '#00FF00', // 2, Green,   120°
-                    '#FFFF00', // 1, Yellow,   60°
-                    '#FF0000'  // 0, Red,       0°
-                ],
-                gradient = context.createLinearGradient(0, -1, 0, 1);
-
-                [1, -1].forEach(function(k) {
-                    k /= 2 * (spectrum.length - 1);
-                    spectrum.forEach(function(color, i) {
-                        gradient.addColorStop(0.5 + k * i, color);
-                    });
-                });
-
-                context.fillStyle = gradient;
-
-                worker.postMessage({type: 'init', args: [Number(Freq.maxRate)]});
-
-                ['volume', 'tau'].forEach(function(id) {
-                    var label = document.getElementById(id + 'Label'),
-                        input = label.control,
-                        k = 1 / (input.getAttribute('data-scaled') || 1);
-                    
-                    function inputChange() {
-                        localStorage[id] = input.value;
-                        var scaled = k * input.value;
-                        worker.postMessage({type: 'set', args: [id, scaled]});
-                        label.innerHTML = scaled.toFixed(2);
-                    }
-                    
-                    if (id in localStorage) {
-                        input.value = localStorage[id];
-                    }
-                    
-                    inputChange();
-                    input.addEventListener('change', inputChange);
-                });
-
-                var msgHandler = {
-                    audio: function (offset, buffer) {
-                        audioDestination.writeAudio(buffer);
-                        mozRequestAnimationFrame(function() {                            
-                            var imgData = context.getImageData(buffer.length, 0, canvas.width, canvas.height);
-                            context.putImageData(imgData, 0, 0);
-                            
-                            var offsetX = canvas.width - buffer.length;
-                            
-                            context.beginPath();
-                            context.moveTo(offsetX, 0);
-                            for (var i = 0, x = offsetX; i < buffer.length; i++, x++) context.lineTo(x, buffer[i]);
-                            context.fill();
-                        });
-                    },
-                    
-                    init: function() {
-                        document.title = document.title.replace('loading', 'ready');
-                    }
-                };
-                
-                worker.onmessage = function (event) {
-                    var funcName = event.data.type;
-                    var handler = funcName in msgHandler ? msgHandler : console;
-                    handler[funcName].apply(handler, event.data.args);
-                }
-
-                var audioDestination = new AudioStream(function (start, available) {
-                    worker.postMessage({type: 'audio', args: [start, available]});
-                });
-                
-                var piano = document.getElementById('piano'),
-                    miniKeys = document.getElementById('miniKeys'),
-                    notes = {
-                        "C"  : "Z", "C#" : "S",
-                        "D"  : "X", "D#" : "D",
-                        "E"  : "C", "E#" : null,
-                        "F"  : "V", "F#" : "G",
-                        "G"  : "B", "G#" : "H",
-                        "A"  : "N", "A#" : "J",
-                        "H"  : "M", "H#" : null,
-                        
-                        "C'" : "Q", "C#'": "2",
-                        "D'" : "W", "D#'": "3",
-                        "E'" : "E", "E#'": null,
-                        "F'" : "R", "F#'": "5",
-                        "G'" : "T", "G#'": "6",
-                        "A'" : "Y", "A#'": "7",
-                        "H'" : "U", "H#'": null
-                    },
-                    kbKeys = {};
-                
-                for (var note in notes) {
-                    var 
-                        isSharp  = note[1] == '#',
-                        freq     = Freq(note),
-                        kbKey    = notes[note],
-                        keyElem  = document.createElement('div'),
-                        parent   = isSharp ? miniKeys : piano;
-
-                    //keyElem.id = keyId;
-                    keyElem.classList.add('pianoKey');
-                    if (isSharp) keyElem.classList.add('miniKey');
-                    keyElem.innerHTML = note;
-                    keyElem.freq = freq;
-                    kbKey ? kbKeys[kbKey] = keyElem : keyElem.style.visibility = 'hidden';
-                    parent.appendChild(keyElem);
-                }
-                
-                piano.addEventListener('click', function (event) {
-                    if (!event.target.classList.contains('pianoKey')) return;
-                    worker.postMessage({type: 'addFreq', args: [audioDestination.mozCurrentSampleOffset(), Number(event.target.freq)]});
-                });
-                
-                var activeKeyClass = 'active';
-                
-                window.addEventListener('keydown', function (event) {
-                    if (event.ctrlKey || event.altKey || event.shiftKey) return;
-                    var keyElem = kbKeys[String.fromCharCode(event.keyCode)];
-                    if (!keyElem) return;
-
-                    keyElem.classList.add(activeKeyClass);
-                    setTimeout(keyElem.classList.remove.bind(keyElem.classList, activeKeyClass), 50);
-                    keyElem.click();
-                });
-                
-                audioDestination.dynamic.start();
-            });
-        </script>
+        <script type="text/javascript" src="test.js"></script>
     </head>
     
     <body>
-        <table>
+        <table id="table">
             <tr>
-                <th class="inf">Volume (<label id="volumeLabel" for="volume">1.00</label>)</th>
-                <td class="min">0</td>
+                <th class="inf">Volume (<label id="volume-label" for="volume"></label>)</th>
+                <td id="volume-min" class="min"></td>
                 <td class="val"><input id="volume" type="range" value="100" data-scaled="100" /></td>
-                <td class="max">100</td>
+                <td id="volume-max" class="max"></td>
                 <td></td>
             </tr>
             <tr>
-                <th class="inf">Tau (<label id="tauLabel" for="tau">0.75</label>)</th>
-                <td class="min">50</td>
-                <td class="val"><input id="tau" type="range" min="50" max="150" value="75" data-scaled="100" /></td>
-                <td class="max">150</td>
+                <th class="inf">Tau (<label id="tau-label" for="tau"></label>)</th>
+                <td id="tau-min" class="min"></td>
+                <td class="val"><input id="tau" type="range" min="10" max="150" value="75" data-scaled="100" /></td>
+                <td id="tau-max" class="max"></td>
                 <td></td>
             </tr>
             <tr style="height: 1em"></tr>
             <tr>
                 <th></th>
-                <td id="piano" colspan="3"><div id="miniKeys"></div></td>
+                <td id="piano" colspan="3"><div id="sharpKeys"></div></td>
                 <td></td>
             </tr>
             <tr>
