@@ -2,16 +2,52 @@
 <html>
     
     <head>
-        <style ype="text/css">
-            #wave { width: 800px; height: 400px; border: 1px solid black; }
+        <title>Piano Demo (loading)</title>
+        <style type="text/css">
+            #wave { width: 100%; height: 200px; border: 1px solid black; }
             .inf { text-align: right; padding-right: 1em }
             .min, .max { width: 3em }
             .min { text-align: right }
             .max { text-align: left }
+            .val { text-align: center }
             .val input { width: 100% }
             #infY { vertical-align: top; text-align: right; padding-right: 2pt }
             #infX { vertical-align: bottom; text-align: left; padding-left: 2pt }
             #controls { text-align: center } 
+            
+            .pianoKey {
+                border: 1px outset #000;
+                border-right-width: 2px;
+                border-bottom-width: 2px;
+                border-bottom-left-radius: 4px;
+                border-bottom-right-radius: 4px;
+                box-shadow: 0 2px 2px 0 #777;
+                text-align: center;
+                height: 300px;
+                width: 60px;
+                float: left;
+                line-height: 450px;
+                cursor: pointer;
+            }
+            .pianoKey:hover {
+                border-style: solid;
+            }
+            .pianoKey:active, .pianoKey.active {
+                border-style: inset;
+                box-shadow: -1px 1px 1px -1px;
+            }
+            #miniKeys {
+                position: absolute;
+                margin-left: 15px;
+            }
+            .miniKey {
+                height: 150px;
+                width: 30px;
+                line-height: 150px;
+                color: #FFF;
+                background: #000;
+                margin-left: 30px;
+            }
         </style>
         <script type="text/javascript" src="html5slider.js"></script>
         <script type="text/javascript" src="freq.js"></script>
@@ -22,24 +58,31 @@
             
                 var canvas = document.getElementById('wave'),
                     context = canvas.getContext('2d'),
-                    worker = new Worker('freqs.worker.js'),
-                    timeWidth = 0.01;
+                    worker = new Worker('freqs.worker.js');
 
-                context.scale(canvas.width / (timeWidth * 2 * Freq.maxRate), -canvas.height / 2);
+                context.scale(1, -canvas.height / 2);
                 context.translate(0, -1);
-                context.fillStyle = '#00F';
+                
+                var spectrum = [
+                    '#FF00FF', // 5, Magenta, 300°
+                    '#0000FF', // 4, Blue,    240°
+                    '#00FFFF', // 3, Cyan,    180°
+                    '#00FF00', // 2, Green,   120°
+                    '#FFFF00', // 1, Yellow,   60°
+                    '#FF0000'  // 0, Red,       0°
+                ],
+                gradient = context.createLinearGradient(0, -1, 0, 1);
 
-                worker.postMessage({
-                    type: 'init',
-                    args:
-                    [
-                        Number(Freq.maxRate),
-                        [
-                            {freq: 261, delay: 0},
-                            {freq: 440, delay: 0}
-                        ]
-                    ]
+                [1, -1].forEach(function(k) {
+                    k /= 2 * (spectrum.length - 1);
+                    spectrum.forEach(function(color, i) {
+                        gradient.addColorStop(0.5 + k * i, color);
+                    });
                 });
+
+                context.fillStyle = gradient;
+
+                worker.postMessage({type: 'init', args: [Number(Freq.maxRate)]});
 
                 ['volume', 'tau'].forEach(function(id) {
                     var label = document.getElementById(id + 'Label'),
@@ -62,12 +105,23 @@
                 });
 
                 var msgHandler = {
-                    callback: function (offset, buffer) {
+                    audio: function (offset, buffer) {
                         audioDestination.writeAudio(buffer);
-
-                        for (var i = 0; i < buffer.length; i++) {
-                            context.fillRect(offset + i, 0, 1, buffer[i]);
-                        }
+                        mozRequestAnimationFrame(function() {                            
+                            var imgData = context.getImageData(buffer.length, 0, canvas.width, canvas.height);
+                            context.putImageData(imgData, 0, 0);
+                            
+                            var offsetX = canvas.width - buffer.length;
+                            
+                            context.beginPath();
+                            context.moveTo(offsetX, 0);
+                            for (var i = 0, x = offsetX; i < buffer.length; i++, x++) context.lineTo(x, buffer[i]);
+                            context.fill();
+                        });
+                    },
+                    
+                    init: function() {
+                        document.title = document.title.replace('loading', 'ready');
                     }
                 };
                 
@@ -81,31 +135,68 @@
                     worker.postMessage({type: 'audio', args: [start, available]});
                 });
                 
-                document.getElementById('start').addEventListener('click', function() {
-                    if(!audioDestination.dynamic.paused) {
-                        context.save();
-                        context.setTransform(1, 0, 0, 1, 0, 0);
-                        context.clearRect(0, 0, canvas.width, canvas.height);
-                        context.restore();
-                    }
-                });
+                var piano = document.getElementById('piano'),
+                    miniKeys = document.getElementById('miniKeys'),
+                    notes = {
+                        "C"  : "Z", "C#" : "S",
+                        "D"  : "X", "D#" : "D",
+                        "E"  : "C", "E#" : null,
+                        "F"  : "V", "F#" : "G",
+                        "G"  : "B", "G#" : "H",
+                        "A"  : "N", "A#" : "J",
+                        "H"  : "M", "H#" : null,
+                        
+                        "C'" : "Q", "C#'": "2",
+                        "D'" : "W", "D#'": "3",
+                        "E'" : "E", "E#'": null,
+                        "F'" : "R", "F#'": "5",
+                        "G'" : "T", "G#'": "6",
+                        "A'" : "Y", "A#'": "7",
+                        "H'" : "U", "H#'": null
+                    },
+                    kbKeys = {};
+                
+                for (var note in notes) {
+                    var 
+                        isSharp  = note[1] == '#',
+                        freq     = Freq(note),
+                        kbKey    = notes[note],
+                        keyElem  = document.createElement('div'),
+                        parent   = isSharp ? miniKeys : piano;
 
-                ['start', 'pause', 'stop'].forEach(function(id) {
-                    document.getElementById(id).addEventListener('click', audioDestination.dynamic[id].bind(audioDestination.dynamic));
+                    //keyElem.id = keyId;
+                    keyElem.classList.add('pianoKey');
+                    if (isSharp) keyElem.classList.add('miniKey');
+                    keyElem.innerHTML = note;
+                    keyElem.freq = freq;
+                    kbKey ? kbKeys[kbKey] = keyElem : keyElem.style.visibility = 'hidden';
+                    parent.appendChild(keyElem);
+                }
+                
+                piano.addEventListener('click', function (event) {
+                    if (!event.target.classList.contains('pianoKey')) return;
+                    worker.postMessage({type: 'addFreq', args: [audioDestination.mozCurrentSampleOffset(), Number(event.target.freq)]});
                 });
+                
+                var activeKeyClass = 'active';
+                
+                window.addEventListener('keydown', function (event) {
+                    if (event.ctrlKey || event.altKey || event.shiftKey) return;
+                    var keyElem = kbKeys[String.fromCharCode(event.keyCode)];
+                    if (!keyElem) return;
+
+                    keyElem.classList.add(activeKeyClass);
+                    setTimeout(keyElem.classList.remove.bind(keyElem.classList, activeKeyClass), 50);
+                    keyElem.click();
+                });
+                
+                audioDestination.dynamic.start();
             });
         </script>
     </head>
     
     <body>
         <table>
-            <tr>
-                <td id="controls" colspan="5">
-                    <button id="start">Start</button>
-                    <button id="pause">Pause</button>
-                    <button id="stop">Stop</button>
-                </td>
-            </tr>
             <tr>
                 <th class="inf">Volume (<label id="volumeLabel" for="volume">1.00</label>)</th>
                 <td class="min">0</td>
@@ -121,6 +212,11 @@
                 <td></td>
             </tr>
             <tr style="height: 1em"></tr>
+            <tr>
+                <th></th>
+                <td id="piano" colspan="3"><div id="miniKeys"></div></td>
+                <td></td>
+            </tr>
             <tr>
                 <th id="infY">p(t)</th>
                 <td colspan="3"><canvas id="wave"></canvas></td>
