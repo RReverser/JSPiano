@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+    
+    <head>
+        <title>Piano Demo (loading)</title>
+        <script type="text/javascript" src="../libs.js/html5slider.js"></script>
+        <script type="text/javascript" src="../common.js/freq.js"></script>
+        <script type="text/javascript" src="main.js"></script>
+        <link type="text/css" rel="stylesheet" href="main.css" />
+    </head>
+    
+    <body>
+        <table id="table">
+            <tr>
+                <th class="inf">Volume (<label id="volume-label" for="volume"></label>)</th>
+                <td id="volume-min" class="min"></td>
+                <td class="val"><input id="volume" type="range" value="100" data-scaled="100" /></td>
+                <td id="volume-max" class="max"></td>
+                <td></td>
+            </tr>
+            <tr>
+                <th class="inf">Tau (<label id="tau-label" for="tau"></label>)</th>
+                <td id="tau-min" class="min"></td>
+                <td class="val"><input id="tau" type="range" min="10" max="150" value="75" data-scaled="100" /></td>
+                <td id="tau-max" class="max"></td>
+                <td></td>
+            </tr>
+            <tr style="height: 1em"></tr>
+            <tr>
+                <th></th>
+                <td id="piano" colspan="3"><div id="sharpKeys"></div></td>
+                <td></td>
+            </tr>
+            <tr>
+                <th id="infY">p(t)</th>
+                <td colspan="3"><canvas id="wave"></canvas></td>
+                <th id="infX">T</th>
+            </tr>
+        </table>
+    </body>
+
+</html>
